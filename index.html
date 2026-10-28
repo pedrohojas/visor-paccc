@@ -1,0 +1,668 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,-apple-system,"Segoe UI",sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Visor de Medidas de Adaptación</title>
+<meta name="description" content="Medidas de adaptación de los PACCC, PARCC y PSA de Chile por comuna.">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Archivo:wght@500;600;700&display=swap">
+</head>
+<body>
+<style>
+/* Layout: mapa de Chile en cuatro franjas a la izquierda como selector; a la derecha, pestañas con indicadores, lista, nivel superior, riesgo y método. */
+:root{
+  --bg:#f6f7f5; --surface:#ffffff; --surface-2:#eef0ec; --line:#d9ddd6; --line-2:#c2c7bd;
+  --fg:#15201d; --fg-2:#4d5a55; --fg-3:#7d8983;
+  --accent:#1f5f8b; --accent-2:#e0ecf5; --accent-fg:#ffffff;
+  --q1:#cde2fb; --q2:#86b6ef; --q3:#3987e5; --q4:#1c5cab; --q5:#0d366b;
+  --g-ausente:#e6e8e3; --g-pend:#d3d6cf; --g-sinmed:#c3c7bf; --g-parcial-ring:#8c6a1a; --g-sinplan:#efe3d6; --g-excl:#b3b7af;
+  --c1:#2a78d6; --c2:#eb6834; --c3:#1baf7a; --c4:#eda100; --c5:#e87ba4; --c6:#6250d6; --c7:#e34948; --c8:#008300;
+  --warn:#b8860b; --ok:#0ca30c;
+  --font-display:"Archivo","IBM Plex Sans",system-ui,sans-serif;
+  --font-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --radius:6px; --shadow:0 1px 2px rgba(21,32,29,.08),0 8px 24px rgba(21,32,29,.08);
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#131917; --surface:#1b2220; --surface-2:#242c29; --line:#2f3936; --line-2:#44504b;
+  --fg:#e8ebe7; --fg-2:#b4bcb7; --fg-3:#86918b;
+  --accent:#5ea2d6; --accent-2:#1d3344; --accent-fg:#0d1a24;
+  --q1:#1c3a5c; --q2:#1c5cab; --q3:#2a78d6; --q4:#5598e7; --q5:#9ec5f4;
+  --g-ausente:#232a27; --g-pend:#2c3431; --g-sinmed:#36403c; --g-parcial-ring:#d9a93a; --g-sinplan:#3a2f26; --g-excl:#414a46;
+  --c1:#3987e5; --c2:#d95926; --c3:#199e70; --c4:#c98500; --c5:#d55181; --c6:#9085e9; --c7:#e66767; --c8:#008300;
+  --warn:#e2b23c; --ok:#3dc13d; --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.4); color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#131917; --surface:#1b2220; --surface-2:#242c29; --line:#2f3936; --line-2:#44504b;
+  --fg:#e8ebe7; --fg-2:#b4bcb7; --fg-3:#86918b;
+  --accent:#5ea2d6; --accent-2:#1d3344; --accent-fg:#0d1a24;
+  --q1:#1c3a5c; --q2:#1c5cab; --q3:#2a78d6; --q4:#5598e7; --q5:#9ec5f4;
+  --g-ausente:#232a27; --g-pend:#2c3431; --g-sinmed:#36403c; --g-parcial-ring:#d9a93a; --g-sinplan:#3a2f26; --g-excl:#414a46;
+  --c1:#3987e5; --c2:#d95926; --c3:#199e70; --c4:#c98500; --c5:#d55181; --c6:#9085e9; --c7:#e66767; --c8:#008300;
+  --warn:#e2b23c; --ok:#3dc13d; --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.4); color-scheme:dark }
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:14px;line-height:1.45;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 24px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+h1,h2,h3{font-family:var(--font-display);text-wrap:balance;margin:0;line-height:1.2}
+h1{font-size:20px;font-weight:600}
+h2{font-size:15px;font-weight:600;letter-spacing:.01em}
+h3{font-size:13px;font-weight:600;color:var(--fg-2)}
+a{color:var(--accent)}
+button,select,input{font:inherit;color:inherit}
+button{cursor:pointer}
+.eyebrow{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--fg-3);font-weight:500}
+.mono{font-family:var(--font-mono);font-size:12px}
+.num{font-variant-numeric:tabular-nums}
+.muted{color:var(--fg-3)}
+.small{font-size:12px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* ---------- cabecera ---------- */
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:var(--bg);border-bottom:1px solid var(--line);padding:10px 0 8px;display:flex;flex-wrap:wrap;gap:6px 18px;align-items:baseline}
+header.top .sub{color:var(--fg-2);font-size:12px}
+header.top .badge{font-size:11px;padding:2px 8px;border:1px solid var(--line-2);border-radius:999px;color:var(--fg-2)}
+
+/* ---------- filtros ---------- */
+.filtros{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.filtros .buscar{flex:1 1 220px;min-width:0;display:flex;gap:6px}
+.filtros input[type=search]{flex:1;min-width:0;padding:6px 10px;border:1px solid var(--line-2);border-radius:var(--radius);background:var(--surface)}
+.chip{border:1px solid var(--line-2);background:var(--surface);border-radius:999px;padding:4px 10px;font-size:12px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.chip.on{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.chip .x{opacity:.7}
+.btn{border:1px solid var(--line-2);background:var(--surface);border-radius:var(--radius);padding:5px 10px;font-size:12.5px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn:hover{border-color:var(--fg-3)}
+.btn.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.btn.sm{padding:3px 8px;font-size:12px}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+details.fdrop{position:relative}
+details.fdrop>summary{list-style:none;cursor:pointer}
+details.fdrop>summary::-webkit-details-marker{display:none}
+details.fdrop:not([open]) .panel{display:none}
+details.fdrop .panel{position:absolute;z-index:20;top:calc(100% + 6px);left:0;min-width:280px;max-width:min(92vw,420px);max-height:60vh;overflow:auto;background:var(--surface);border:1px solid var(--line-2);border-radius:var(--radius);box-shadow:var(--shadow);padding:8px 10px}
+details.fdrop .panel label{display:flex;gap:8px;align-items:flex-start;padding:4px 2px;font-size:12.5px;cursor:pointer}
+details.fdrop .panel label .n{margin-left:auto;color:var(--fg-3);font-family:var(--font-mono);font-size:11px}
+details.fdrop .panel .ph{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:2px 0 6px;border-bottom:1px solid var(--line);margin-bottom:4px}
+details.fdrop .panel .grp{margin-top:6px}
+details.fdrop .panel .src{font-size:11px;color:var(--fg-3);margin:4px 0 2px}
+@media (max-width:600px){details.fdrop .panel{position:fixed;left:max(16px,env(safe-area-inset-left,0px));right:max(16px,env(safe-area-inset-right,0px));top:auto;min-width:0;max-width:none;max-height:50vh}}
+
+/* ---------- cuerpo ---------- */
+.cuerpo{display:grid;grid-template-columns:minmax(320px,500px) minmax(0,1fr);gap:20px;margin-top:12px;align-items:start}
+.cuerpo>*{min-width:0}
+@media (max-width:900px){.cuerpo{grid-template-columns:1fr}}
+.mapa-col{position:sticky;top:calc(env(safe-area-inset-top,0px) + 54px)}
+@media (max-width:900px){.mapa-col{position:static}}
+.mapa-head{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:6px}
+.mapa-head select{padding:4px 6px;border:1px solid var(--line-2);border-radius:var(--radius);background:var(--surface);font-size:12px;max-width:100%}
+.mapa-wrap{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);position:relative;overflow:hidden}
+.mapa-wrap svg{display:block;width:100%;height:auto}
+.mapa-wrap .com{stroke:var(--surface);stroke-width:.4;cursor:pointer;transition:opacity .12s}
+.mapa-wrap .com:hover{stroke:var(--fg);stroke-width:1}
+.mapa-wrap .com.sel{stroke:var(--fg);stroke-width:1.2}
+.mapa-wrap .reg{fill:none;stroke:var(--fg-2);stroke-width:.7;pointer-events:none}
+.mapa-wrap .reg-hit{fill:transparent;stroke:none;cursor:pointer}
+.mapa-wrap .reg-hit:hover{fill:rgba(31,95,139,.12)}
+.mapa-wrap .lbl{font-family:var(--font-body);font-size:9px;fill:var(--fg);pointer-events:none;paint-order:stroke;stroke:var(--surface);stroke-width:2.5px;stroke-linejoin:round}
+.mapa-wrap .strip-lbl{font-family:var(--font-display);font-size:10px;letter-spacing:.08em;text-transform:uppercase;fill:var(--fg-3)}
+.mapa-wrap .strip-line{stroke:var(--line);stroke-width:1}
+.mapa-wrap .parcial{stroke:var(--g-parcial-ring);stroke-width:.9;stroke-dasharray:2 1.5}
+.tip{position:fixed;z-index:30;pointer-events:none;background:var(--surface);color:var(--fg);border:1px solid var(--line-2);border-radius:var(--radius);box-shadow:var(--shadow);padding:8px 10px;font-size:12px;max-width:260px;display:none}
+.tip b{font-weight:600}
+.tip .t2{color:var(--fg-2);margin-top:2px}
+.leyenda{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;font-size:11px;color:var(--fg-2);margin-top:6px}
+.leyenda .sw{display:inline-block;width:14px;height:11px;border-radius:2px;vertical-align:-1px;margin-right:4px;border:1px solid var(--line)}
+.leyenda .sw.pend{background:repeating-linear-gradient(45deg,var(--g-pend) 0 2px,var(--surface) 2px 4px)}
+.leyenda .sw.parcial{border:1.5px dashed var(--g-parcial-ring)}
+.islas{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;align-items:center}
+.sel-bar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px;font-size:12px}
+.sel-bar .chips{display:flex;flex-wrap:wrap;gap:4px;max-height:84px;overflow:auto}
+
+/* ---------- pestañas ---------- */
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);overflow-x:auto}
+.tabs button{border:0;background:none;padding:8px 12px;font-size:13px;color:var(--fg-2);border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
+.tabs button.on{color:var(--fg);border-bottom-color:var(--accent);font-weight:600}
+.vista{padding-top:12px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:10px 12px}
+.kpi .v{font-family:var(--font-display);font-size:24px;font-weight:600;line-height:1.1;font-variant-numeric:tabular-nums}
+.kpi .l{font-size:12px;color:var(--fg-2);margin-top:2px}
+.kpi .s{font-size:11px;color:var(--fg-3);margin-top:3px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;min-width:0}
+.card h2{margin-bottom:8px;display:flex;align-items:baseline;gap:8px}
+.card h2 .src{font-weight:400;font-size:11px;color:var(--fg-3);margin-left:auto;cursor:help}
+.bars{display:grid;grid-template-columns:minmax(90px,1.2fr) minmax(0,2fr) 44px;gap:3px 8px;align-items:center;font-size:12px}
+.bars .k{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--fg-2);cursor:pointer}
+.bars .k:hover{color:var(--accent);text-decoration:underline}
+.bars .b{height:12px;background:var(--surface-2);border-radius:3px;overflow:hidden;min-width:0}
+.bars .b i{display:block;height:100%;background:var(--accent);border-radius:3px}
+.bars .n{text-align:right;font-family:var(--font-mono);font-size:11.5px;color:var(--fg-2)}
+.stack{display:flex;height:14px;border-radius:3px;overflow:hidden;gap:2px;background:var(--surface-2)}
+.stack i{display:block;height:100%}
+.stack-leg{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11.5px;color:var(--fg-2);margin-top:6px}
+.stack-leg .sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+.tags{display:flex;flex-wrap:wrap;gap:5px}
+.tag{border:1px solid var(--line-2);border-radius:999px;padding:2px 9px;font-size:12px;background:var(--surface-2);cursor:pointer}
+.tag .n{font-family:var(--font-mono);font-size:11px;color:var(--fg-3);margin-left:5px}
+.tag:hover{border-color:var(--accent);color:var(--accent)}
+.aviso{font-size:12px;color:var(--fg-2);background:var(--surface-2);border-left:3px solid var(--warn);padding:8px 10px;border-radius:0 var(--radius) var(--radius) 0;margin-top:10px}
+.vacio{color:var(--fg-3);font-size:13px;padding:14px 0}
+.sint{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:var(--radius);padding:12px 14px;margin-bottom:14px}
+.sint .cab{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:baseline;margin-bottom:6px}
+.sint p{margin:6px 0;max-width:78ch;line-height:1.55}
+.sint ul{margin:4px 0 0;padding-left:18px}
+.sint li{margin:3px 0;max-width:78ch}
+.sint .lnk{color:var(--accent);cursor:pointer;font-family:var(--font-mono);font-size:11.5px;text-decoration:underline}
+.sint .lnk.off{color:var(--fg-3);cursor:default;text-decoration:none}
+.sint .meta{font-size:11px;color:var(--fg-3);margin-top:8px}
+.ia-out{white-space:pre-wrap;line-height:1.55;max-width:80ch;font-size:13.5px}
+details.sdet{border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);padding:8px 12px;margin-bottom:8px}
+details.sdet summary{cursor:pointer;font-weight:600}
+
+/* ---------- tabla ---------- */
+.tbl-tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px;font-size:12px}
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{position:sticky;top:0;background:var(--surface-2);font-weight:600;font-size:11.5px;white-space:nowrap;cursor:pointer;user-select:none}
+th .ord{color:var(--fg-3);font-size:10px}
+tbody tr:hover{background:var(--accent-2)}
+td.nom{min-width:240px;cursor:pointer}
+td.nom:hover{color:var(--accent)}
+.cod{font-family:var(--font-mono);font-size:11px;color:var(--fg-3)}
+.pill{display:inline-block;padding:1px 7px;border-radius:999px;font-size:11px;border:1px solid var(--line-2);white-space:nowrap}
+.pill.conf-baja{border-style:dashed}
+.pill.sbn{background:var(--accent-2);border-color:transparent}
+.pill.dir{background:var(--accent);color:var(--accent-fg);border-color:transparent}
+
+/* ---------- ficha ---------- */
+.modal-bg{position:fixed;inset:0;background:rgba(10,14,13,.45);z-index:40;display:flex;align-items:flex-start;justify-content:center;padding:4vh 12px;overflow:auto}
+.modal{background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow);max-width:860px;width:100%;padding:18px 20px;position:relative}
+.modal .cerrar{position:absolute;top:10px;right:10px}
+.modal h2{font-size:17px;margin-top:4px;padding-right:40px}
+.ficha{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px 18px;margin-top:12px}
+.ficha .f{min-width:0}
+.ficha .f .k{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--fg-3)}
+.ficha .f .v{font-size:13px;white-space:pre-wrap;overflow-wrap:anywhere}
+.ficha .wide{grid-column:1/-1}
+.clas{display:grid;grid-template-columns:1fr;gap:6px;margin-top:8px}
+.clas .r{display:grid;grid-template-columns:minmax(120px,160px) 1fr;gap:8px;font-size:12.5px;border-top:1px solid var(--line);padding-top:6px}
+.clas .r .k{color:var(--fg-3);font-size:11.5px}
+.cita{font-size:12.5px;color:var(--fg-2);border-left:3px solid var(--line-2);padding:4px 10px;margin-top:6px;font-style:italic}
+
+/* ---------- método ---------- */
+.metodo p{max-width:70ch}
+.metodo table{font-size:12px}
+footer{margin-top:28px;padding-top:12px;border-top:1px solid var(--line);font-size:12px;color:var(--fg-2);max-width:90ch}
+.cargando{padding:40px;text-align:center;color:var(--fg-3)}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+
+<header class="top">
+  <h1>Medidas de adaptación en los instrumentos de gestión del cambio climático — Chile</h1>
+  <span class="sub" id="subtitulo">PACCC · PARCC · PSA</span>
+  <span class="badge">Versión de trabajo · clasificaciones generadas por IA · ver Método</span>
+</header>
+
+<div class="filtros" id="filtros">
+  <div class="buscar">
+    <input type="search" id="q" placeholder="Buscar en nombre, código, indicador, meta o resumen…" aria-label="Buscar texto">
+  </div>
+  <button class="btn sm" id="preset-mop" title="Relevancia Agenda de Resiliencia directa o indirecta y amenazas A01, A02, A03, A09">Cartera MOP–MMA</button>
+  <button class="btn sm" id="preset-sbn" title="es_sbn = sbn o potencial_sbn">SbN</button>
+  <button class="btn sm" id="limpiar" hidden>Quitar filtros</button>
+  <span id="fchips" style="display:contents"></span>
+</div>
+
+<div class="cuerpo">
+  <aside class="mapa-col">
+    <div class="mapa-head">
+      <select id="metrica" aria-label="Métrica del mapa"></select>
+      <button class="btn sm" id="btn-chile" title="Volver a la vista nacional">Chile</button>
+      <button class="btn sm" id="btn-selreg" hidden>Seleccionar toda la región</button>
+      <button class="btn sm" id="btn-limpiar-sel" hidden>Quitar selección</button>
+    </div>
+    <div class="mapa-wrap" id="mapa"><div class="cargando">Cargando geometría…</div></div>
+    <div class="leyenda" id="leyenda"></div>
+    <div class="islas" id="islas"><span class="eyebrow">Islas</span></div>
+    <div class="sel-bar" id="selbar"></div>
+  </aside>
+
+  <main>
+    <div class="tabs" id="tabs">
+      <button data-v="resumen" class="on">Resumen</button>
+      <button data-v="medidas">Medidas</button>
+      <button data-v="superior">PARCC y PSA</button>
+      <button data-v="riesgo">Riesgo declarado</button>
+      <button data-v="metodo">Método y cobertura</button>
+    </div>
+    <div class="vista" id="vista"><div class="cargando">Cargando datos…</div></div>
+  </main>
+</div>
+
+<footer id="pie"></footer>
+<div class="tip" id="tip"></div>
+<div id="modal"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
+<script>
+(async function(){
+"use strict";
+const $=s=>document.querySelector(s), h=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmt=n=>n==null?"—":Number(n).toLocaleString("es-CL");
+const fmtCLP=n=>n==null?"—":(n>=1e9?(n/1e9).toLocaleString("es-CL",{maximumFractionDigits:2})+" mil M":n>=1e6?(n/1e6).toLocaleString("es-CL",{maximumFractionDigits:1})+" M":n.toLocaleString("es-CL"));
+const norm=s=>String(s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase();
+
+let D,TOPO,DET=null;
+try{
+  [D,TOPO]=await Promise.all([fetch("datos.json").then(r=>r.json()),fetch("comunas.topojson").then(r=>r.json())]);
+}catch(e){ $("#vista").innerHTML='<div class="vacio">No se pudieron cargar datos.json o comunas.topojson. Deben estar publicados junto a esta página.</div>'; return; }
+let SINT=null; fetch("resumenes.json").then(r=>r.json()).then(d=>{SINT=d; render();}).catch(()=>{});
+const ID2I=new Map();
+fetch("detalle.json").then(r=>r.json()).then(d=>{DET=d; for(const k in d){ if(d[k].id_medida) ID2I.set(d[k].id_medida,+k); } render();}).catch(()=>{});
+
+// ---------- índices ----------
+const M=D.medidas, N=M.inst.length, I=D.instrumentos, DICC=D.dicc, ET=D.etiquetas, T=D.territorio;
+T.forEach(t=>{ if(t.nm>0&&["sin_medidas","pendiente","ausente","sin_plan",null].includes(t.estado)){ t.estado_cob=t.estado; t.estado=(t.n_decl&&t.n_decl>t.nm)?"parcial":"completo"; } });
+const tByCut=new Map(T.map(t=>[t.cut,t]));
+const instCut=I.map(i=>i.cut), instReg=I.map(i=>i.reg), instTipo=I.map(i=>i.tipo);
+const regNombre={}; T.forEach(t=>regNombre[t.reg]=t.region);
+const REG_ORDEN=["15","01","02","03","04","05","13","06","07","16","08","09","14","10","11","12"];
+const ETIQ={tipo:"tipo_canonico",sector:"sector_lmcc",tema:"tema_ndc",intervencion:"tipo_intervencion_fao",naturaleza:"naturaleza_intervencion",es_sbn:"es_sbn",tipologia:"tipologia_sbn_sni",amenaza_principal:"amenaza_canonica",amenazas:"amenaza_canonica",pnacc_oe:"pnacc_oe",pnacc_le:"pnacc_le",pnacc_lt:"pnacc_lt",mop:"servicio_mop",financiamiento:"estado_financiamiento",relevancia_mop:null,confianza:null,vinculo:"vinculo_amenaza",enfoques:"enfoques_transversales"};
+const PROC={tipo:"CLAUDE.md §4.1",amenazas:"PNACC DS 14/2025, ARClim, PSMA Ciudades (§4.2)",amenaza_principal:"PNACC DS 14/2025, ARClim, PSMA Ciudades (§4.2)",sector:"Ley 21.455, 12 sectores con PSA (§4.4)",tema:"Análisis de medidas PACCC, MMA ene-2026, ajustado (§4.5)",intervencion:"FAO/FVC Fomento de las SbN para Chile (§4.6)",naturaleza:"CLAUDE.md §4.7",es_sbn:"Guía SbN en planes de adaptación, MMA 2025 (§4.8)",tipologia:"Tipologías SbN para el SNI, FAO (§4.9)",mop:"Servicios MOP (§4.10)",financiamiento:"CLAUDE.md §4.11",pnacc_oe:"PNACC DS 14/2025 (§4.12)",pnacc_le:"PNACC DS 14/2025 (§4.12)",pnacc_lt:"PNACC DS 14/2025 pp. 42–55 (§4.12)",enfoques:"PSMA Ciudades p. 153 (§4.12)",relevancia_mop:"Regla 6, CLAUDE.md §6",confianza:"Nivel asignado por el modelo (§2)",vinculo:"CLAUDE.md §4.3",estado:"Inventario P1"};
+const LABEL={tipo:"Tipo canónico",sector:"Sector Ley 21.455",tema:"Tema NDC",intervencion:"Intervención FAO",naturaleza:"Naturaleza",es_sbn:"SbN",tipologia:"Tipología SbN (SNI)",amenazas:"Amenaza (cualquiera)",amenaza_principal:"Amenaza principal",pnacc_oe:"PNACC objetivo",pnacc_le:"PNACC línea",pnacc_lt:"PNACC lineamiento",mop:"Servicio MOP",financiamiento:"Financiamiento",relevancia_mop:"Agenda de Resiliencia",confianza:"Confianza",vinculo:"Vínculo amenaza",enfoques:"Enfoque transversal",tinst:"Tipo de instrumento",estado:"Estado del plan"};
+const RELEV_ET={directa:"Directa",indirecta:"Indirecta",ninguna:"Ninguna"}, CONF_ET={alta:"Alta",media:"Media",baja:"Baja"};
+function et(cat,v){ if(v==null) return "sin dato"; if(cat==="relevancia_mop") return RELEV_ET[v]||v; if(cat==="confianza") return CONF_ET[v]||v; if(cat==="tinst"||cat==="estado") return v;
+  const k=ETIQ[cat]; const e=k&&ET[k]&&ET[k][v]; return e?e.etiqueta:v; }
+function etShort(cat,v,max=38){ const s=et(cat,v); return s.length>max?s.slice(0,max-1)+"…":s; }
+// valores por medida (decodificados), multi-valor para mop, pnacc_lt, amenazas, enfoques
+const MULTI={mop:1,pnacc_lt:1,amenazas:1,enfoques:1};
+const cache={};
+function vals(cat){ if(cache[cat]) return cache[cat];
+  let out;
+  if(cat==="amenazas"||cat==="enfoques") out=M[cat].map(s=>s?s.split(";"):[]);
+  else if(MULTI[cat]) out=M[cat].map(i=>{const v=DICC[cat][i]; return v?v.split(";"):[];});
+  else if(cat==="tinst") out=M.inst.map(i=>instTipo[i]);
+  else if(cat==="estado") out=M.inst.map(i=>I[i].estado);
+  else out=M[cat].map(i=>DICC[cat][i]);
+  return cache[cat]=out; }
+const FILTRO_CATS=["tinst","estado","tipo","amenazas","vinculo","sector","tema","intervencion","naturaleza","es_sbn","tipologia","mop","relevancia_mop","financiamiento","pnacc_oe","pnacc_le","pnacc_lt","enfoques","confianza"];
+const nombreN=M.nombre.map(norm), codN=M.codigo.map(norm);
+
+// ---------- estado ----------
+const state={sel:new Set(),filtros:{},q:"",vista:"resumen",metrica:"n",zoomReg:null,orden:{k:"comuna",asc:true},pag:1};
+const ISLAS=["05201","05104"];
+
+// ---------- filtrado ----------
+function pasaFiltros(i){
+  for(const cat in state.filtros){ const S=state.filtros[cat]; if(!S.size) continue;
+    const v=vals(cat)[i];
+    if(Array.isArray(v)){ if(!v.some(x=>S.has(x))) return false; } else if(!S.has(v)) return false; }
+  if(state.q){ const q=state.q; if(!(nombreN[i].includes(q)||codN[i].includes(q)||(DET&&DET[i]&&(norm(DET[i].indicador).includes(q)||norm(DET[i].meta).includes(q)||norm(DET[i].resumen).includes(q)||norm(DET[i].objetivo).includes(q))))) return false; }
+  return true;
+}
+let F=null; // medidas que pasan filtros temáticos (todos los instrumentos)
+let porCut=new Map(); // conteos para el mapa (PACCC)
+function recalcular(){
+  F=[]; porCut=new Map(); const met=state.metrica;
+  for(let i=0;i<N;i++){ if(!pasaFiltros(i)) continue; F.push(i);
+    const inst=M.inst[i]; if(instTipo[inst]!=="PACCC") continue; const cut=instCut[inst]; if(!cut) continue;
+    let w=1;
+    if(met==="adapt") w=DICC.tipo[M.tipo[i]]==="adaptacion"?1:0;
+    else if(met==="sbn") w=/^(sbn|potencial_sbn)$/.test(DICC.es_sbn[M.es_sbn[i]]||"")?1:0;
+    else if(met==="mop") w=DICC.relevancia_mop[M.relevancia_mop[i]]==="directa"?1:0;
+    else if(met==="costo") w=M.costo_clp[i]||0;
+    if(w) porCut.set(cut,(porCut.get(cut)||0)+w);
+  }
+  if(met==="pob"){ for(const [cut,v] of porCut){ const p=tByCut.get(cut)?.pob; porCut.set(cut,p?v/p*1e4:0); } }
+}
+function enSeleccion(i){ const inst=M.inst[i]; if(instTipo[inst]!=="PACCC") return false; return state.sel.size===0||state.sel.has(instCut[inst]); }
+function regionesSel(){ if(state.sel.size===0) return new Set(REG_ORDEN); const s=new Set(); state.sel.forEach(c=>s.add(tByCut.get(c)?.reg)); return s; }
+function comunasSel(){ return state.sel.size? [...state.sel].map(c=>tByCut.get(c)).filter(Boolean) : T; }
+
+// ---------- mapa ----------
+const CONT=topojson.feature(TOPO,TOPO.objects.continente).features, REGS=topojson.feature(TOPO,TOPO.objects.regiones).features;
+const regMesh=topojson.mesh(TOPO,TOPO.objects.regiones,(a,b)=>a!==b);
+const STRIPS=[{n:"Norte",lat:[-17.45,-29.3]},{n:"Centro",lat:[-29.3,-36.6]},{n:"Centro sur",lat:[-36.6,-44.1]},{n:"Austral",lat:[-44.1,-56.1]}];
+const W=420, H=740, PAD=14;
+const tip=$("#tip");
+function tooltip(ev,html){ tip.innerHTML=html; tip.style.display="block"; const r=tip.getBoundingClientRect(); let x=ev.clientX+14,y=ev.clientY+14; if(x+r.width>innerWidth-8) x=ev.clientX-r.width-10; if(y+r.height>innerHeight-8) y=ev.clientY-r.height-10; tip.style.left=x+"px"; tip.style.top=y+"px"; }
+function tipOff(){ tip.style.display="none"; }
+const ESTADO_ET={completo:"Plan leído completo",parcial:"Plan leído parcialmente",sin_medidas:"Plan sin medidas extraídas",pendiente:"Plan pendiente de lectura",sin_plan:"Carpeta sin plan",excluido:"Excluido del análisis",ausente:"Sin plan en el corpus"};
+function colorComuna(cut,q){ const t=tByCut.get(cut); const v=porCut.get(cut)||0; const est=t?.estado||"ausente";
+  if(est==="ausente") return "var(--g-ausente)"; if(est==="sin_plan") return "var(--g-sinplan)"; if(est==="excluido") return "var(--g-excl)";
+  if(est==="pendiente") return "url(#hatch)"; if(est==="sin_medidas"&&!v) return "var(--g-sinmed)";
+  if(!v) return "var(--q1)"; return `var(--q${q(v)})`; }
+function escalaQ(){ const vs=[...porCut.values()].filter(v=>v>0).sort((a,b)=>a-b); if(!vs.length) return {q:()=>1,cortes:[]};
+  const cortes=[.2,.4,.6,.8].map(p=>d3.quantileSorted(vs,p)); return {q:v=>1+cortes.filter(c=>v>c).length,cortes,min:vs[0],max:vs[vs.length-1]}; }
+function tipComuna(ev,cut){ const t=tByCut.get(cut); const inst=I.find(i=>i.cut===cut&&i.tipo==="PACCC"); const v=porCut.get(cut)||0;
+  const nf=F.filter(i=>instCut[M.inst[i]]===cut).length;
+  tooltip(ev,`<b>${h(t?.comuna)}</b> · ${h(t?.region)}<div class="t2">${h(ESTADO_ET[t?.estado]||t?.estado||"")}${t?.causa?": "+h(t.causa):""}</div>${inst?`<div class="t2">${h(inst.nombre||inst.id)} · <i>${h(inst.estado||"")}</i></div>`:""}<div class="t2">${t?.nm?`${fmt(nf)} medidas con los filtros actuales (${fmt(t.nm)} en total)`:"sin medidas en la base"}${t?.n_decl&&t.n_decl!==t.nm?` · ${fmt(t.n_decl)} declaradas por el plan`:""}</div>${state.metrica!=="n"&&v?`<div class="t2">Valor de la métrica: ${state.metrica==="costo"?"$ "+fmtCLP(v):fmt(Math.round(v*100)/100)}</div>`:""}`); }
+function dibujarMapa(){
+  const wrap=$("#mapa"); const sc=escalaQ();
+  const svg=d3.create("svg").attr("viewBox",`0 0 ${W} ${H}`).attr("role","img").attr("aria-label","Mapa de Chile por comuna");
+  const defs=svg.append("defs");
+  defs.append("pattern").attr("id","hatch").attr("width",4).attr("height",4).attr("patternUnits","userSpaceOnUse").attr("patternTransform","rotate(45)").append("rect").attr("width",2).attr("height",4).attr("fill","var(--g-pend)");
+  if(state.zoomReg){
+    const feats=CONT.filter(f=>f.properties.reg===state.zoomReg);
+    const HR=540; svg.attr("viewBox",`0 0 ${W} ${HR}`);
+    const proj=d3.geoMercator().fitExtent([[PAD,PAD+18],[W-PAD,HR-PAD]],{type:"FeatureCollection",features:feats}); const path=d3.geoPath(proj);
+    svg.append("text").attr("class","strip-lbl").attr("x",PAD).attr("y",14).text("Región de "+regNombre[state.zoomReg]);
+    const g=svg.append("g");
+    g.selectAll("path").data(feats).join("path").attr("class",d=>"com"+(state.sel.has(d.id)?" sel":"")+(tByCut.get(d.id)?.estado==="parcial"?" parcial":""))
+      .attr("d",path).attr("fill",d=>colorComuna(d.id,sc.q))
+      .on("mousemove",(ev,d)=>tipComuna(ev,d.id)).on("mouseleave",tipOff).on("click",(ev,d)=>{toggleSel(d.id);});
+    g.selectAll("text").data(feats.filter(f=>path.area(f)>900)).join("text").attr("class","lbl").attr("text-anchor","middle")
+      .attr("transform",d=>`translate(${path.centroid(d)})`).attr("dy",3).text(d=>d.properties.nom);
+  } else {
+    const colW=(W-PAD*2)/4; const stripH=H-PAD-26;
+    // cada franja se ajusta a su propio ancho: las escalas difieren entre franjas (es un selector, no un mapa a escala)
+    const p0=d3.geoMercator().scale(1).translate([0,0]);
+    const prep=STRIPS.map(s=>{ const feats=CONT.filter(f=>{const b=d3.geoBounds(f); return b[1][1]>s.lat[1]-0.5&&b[0][1]<s.lat[0]+0.5;});
+      const bb=d3.geoBounds({type:"FeatureCollection",features:feats}); const lon0=Math.max(bb[0][0],-76.8), lon1=Math.min(bb[1][0],-66.4);
+      const [ax,ay]=p0([lon0,s.lat[0]]), [bx,by]=p0([lon1,s.lat[1]]); const k=Math.min((colW-8)/(bx-ax),(stripH-8)/(by-ay)); return {feats,ax,ay,bx,by,k,alto:k*(by-ay)}; });
+    const altoMax=Math.ceil(d3.max(prep,p=>p.alto))+8; svg.attr("viewBox",`0 0 ${W} ${altoMax+30+PAD}`);
+    STRIPS.forEach((s,si)=>{
+      const x0=PAD+si*colW; const id="clip"+si; const {feats,ax,ay,bx,k,alto}=prep[si];
+      defs.append("clipPath").attr("id",id).append("rect").attr("x",x0).attr("y",26).attr("width",colW).attr("height",alto+8);
+      const proj=d3.geoMercator().scale(k).translate([x0+colW/2-k*(ax+bx)/2,30-k*ay]);
+      const path=d3.geoPath(proj);
+      svg.append("text").attr("class","strip-lbl").attr("x",x0+colW/2).attr("y",14).attr("text-anchor","middle").text(s.n);
+      if(si) svg.append("line").attr("class","strip-line").attr("x1",x0).attr("x2",x0).attr("y1",22).attr("y2",altoMax+30);
+      const g=svg.append("g").attr("clip-path",`url(#${id})`);
+      g.selectAll("path.com").data(feats).join("path").attr("class",d=>"com"+(state.sel.has(d.id)?" sel":"")+(tByCut.get(d.id)?.estado==="parcial"?" parcial":""))
+        .attr("d",path).attr("fill",d=>colorComuna(d.id,sc.q))
+        .on("mousemove",(ev,d)=>tipComuna(ev,d.id)).on("mouseleave",tipOff)
+        .on("click",(ev,d)=>{ if(ev.shiftKey||ev.metaKey) toggleSel(d.id); else {state.zoomReg=d.properties.reg; dibujarMapa(); actualizarBotonesMapa();} });
+      g.append("path").attr("class","reg").attr("d",path(regMesh));
+    });
+    svg.append("text").attr("class","strip-lbl").attr("x",W-PAD).attr("y",altoMax+30+PAD-4).attr("text-anchor","end").style("text-transform","none").style("letter-spacing","0").text("Clic en una región para ampliar · Mayús+clic selecciona la comuna");
+  }
+  wrap.replaceChildren(svg.node());
+  // leyenda
+  const L=$("#leyenda"); const met=METRICAS.find(m=>m.k===state.metrica);
+  let html=`<span class="eyebrow">${h(met.l)}</span>`;
+  if(sc.cortes.length){ const b=[sc.min,...sc.cortes,sc.max]; for(let i=0;i<5;i++) html+=`<span><span class="sw" style="background:var(--q${i+1})"></span>${state.metrica==="costo"?fmtCLP(b[i]):fmt(Math.round(b[i]*10)/10)}–${state.metrica==="costo"?fmtCLP(b[i+1]):fmt(Math.round(b[i+1]*10)/10)}</span>`; }
+  html+=`<span><span class="sw" style="background:var(--q1)"></span>0 con filtros</span><span><span class="sw parcial"></span>lectura parcial</span><span><span class="sw" style="background:var(--g-sinmed)"></span>plan sin medidas extraídas</span><span><span class="sw pend"></span>pendiente</span><span><span class="sw" style="background:var(--g-sinplan)"></span>carpeta sin plan</span><span><span class="sw" style="background:var(--g-ausente)"></span>sin plan en el corpus</span>`;
+  L.innerHTML=html;
+}
+const METRICAS=[{k:"n",l:"Medidas (con filtros)"},{k:"adapt",l:"Medidas de adaptación"},{k:"sbn",l:"Medidas SbN o potencial SbN"},{k:"mop",l:"Relevancia Agenda de Resiliencia directa"},{k:"costo",l:"Costo declarado (CLP)"},{k:"pob",l:"Medidas por 10.000 habitantes"}];
+function toggleSel(cut){ if(state.sel.has(cut)) state.sel.delete(cut); else state.sel.add(cut); state.pag=1; refrescar(); }
+function actualizarBotonesMapa(){ $("#btn-chile").hidden=!state.zoomReg; $("#btn-selreg").hidden=!state.zoomReg; $("#btn-limpiar-sel").hidden=!state.sel.size;
+  $("#btn-selreg").textContent="Seleccionar toda la región"; }
+function dibujarIslas(){ const el=$("#islas"); el.querySelectorAll("button").forEach(b=>b.remove());
+  ISLAS.forEach(cut=>{ const t=tByCut.get(cut); const b=document.createElement("button"); b.className="chip"+(state.sel.has(cut)?" on":""); const v=porCut.get(cut)||0;
+    b.innerHTML=`${h(t?.comuna)} <span class="mono">${t?.nm?fmt(v):"—"}</span>`; b.title=(ESTADO_ET[t?.estado]||"")+(t?.causa?": "+t.causa:""); b.onclick=()=>toggleSel(cut); el.appendChild(b); }); }
+function dibujarSelBar(){ const el=$("#selbar"); if(!state.sel.size){ el.innerHTML='<span class="muted">Selección: todo el país. Mayús+clic en una comuna, o amplía una región y haz clic en sus comunas.</span>'; return; }
+  const cs=comunasSel(); const porReg=d3.group(cs,c=>c.reg);
+  let html=`<span>Selección: <b>${cs.length}</b> comuna${cs.length>1?"s":""} en ${porReg.size} región${porReg.size>1?"es":""}</span><div class="chips">`;
+  cs.slice(0,60).forEach(c=>html+=`<button class="chip on" data-cut="${c.cut}" title="Quitar">${h(c.comuna)} <span class="x">×</span></button>`);
+  if(cs.length>60) html+=`<span class="muted">… y ${cs.length-60} más</span>`;
+  el.innerHTML=html+"</div>"; el.querySelectorAll("button[data-cut]").forEach(b=>b.onclick=()=>toggleSel(b.dataset.cut)); }
+
+// ---------- filtros UI ----------
+function conteos(cat){ const c=new Map(); const V=vals(cat); for(let i=0;i<N;i++){ if(!enSeleccion(i)&&instTipo[M.inst[i]]==="PACCC") continue; const v=V[i]; (Array.isArray(v)?v:[v]).forEach(x=>c.set(x,(c.get(x)||0)+1)); } return c; }
+function ordenValores(cat,keys){ const k=ETIQ[cat]; if(k&&ET[k]){ const ord=Object.keys(ET[k]); return keys.sort((a,b)=>(ord.indexOf(a)+1||99)-(ord.indexOf(b)+1||99)); } return keys.sort(); }
+function dibujarFiltros(){
+  const host=$("#fchips"); host.innerHTML="";
+  FILTRO_CATS.forEach(cat=>{
+    const S=state.filtros[cat]||new Set(); const c=conteos(cat); const keys=ordenValores(cat,[...c.keys()].filter(k=>k!=null));
+    const d=document.createElement("details"); d.className="fdrop";
+    const grupos=new Map(); keys.forEach(k=>{ const kk=ETIQ[cat]; const g=(kk&&ET[kk]&&ET[kk][k]&&ET[kk][k].grupo)||""; if(!grupos.has(g)) grupos.set(g,[]); grupos.get(g).push(k); });
+    let panel=`<div class="ph"><span class="eyebrow">${h(LABEL[cat])}</span><span><button class="btn sm" data-act="todo">Ninguno</button></span></div><div class="src">Procedencia: ${h(PROC[cat]||"")}</div>`;
+    grupos.forEach((ks,g)=>{ if(g&&grupos.size>1) panel+=`<div class="grp eyebrow">${h(g)}</div>`; ks.forEach(k=>{ panel+=`<label><input type="checkbox" value="${h(k)}" ${S.has(k)?"checked":""}> <span>${h(et(cat,k))}</span><span class="n">${fmt(c.get(k))}</span></label>`; }); });
+    if(c.has(null)) panel+=`<label><input type="checkbox" value="__null" ${S.has(null)?"checked":""}> <span class="muted">sin dato</span><span class="n">${fmt(c.get(null))}</span></label>`;
+    d.innerHTML=`<summary class="chip ${S.size?"on":""}">${h(LABEL[cat])}${S.size?` <span class="mono">${S.size}</span>`:""} ▾</summary><div class="panel">${panel}</div>`;
+    d.querySelectorAll("input").forEach(inp=>inp.onchange=()=>{ const v=inp.value==="__null"?null:inp.value; const set=state.filtros[cat]||(state.filtros[cat]=new Set()); if(inp.checked) set.add(v); else set.delete(v); if(!set.size) delete state.filtros[cat]; state.pag=1; refrescar(); });
+    d.querySelector("[data-act=todo]").onclick=()=>{ delete state.filtros[cat]; refrescar(); };
+    host.appendChild(d);
+  });
+  document.addEventListener("click",ev=>{ document.querySelectorAll("details.fdrop[open]").forEach(d=>{ if(!d.contains(ev.target)) d.open=false; }); },{once:true,capture:true});
+  const n=Object.keys(state.filtros).length+(state.q?1:0); $("#limpiar").hidden=!n;
+}
+document.addEventListener("click",ev=>{ document.querySelectorAll("details.fdrop[open]").forEach(d=>{ if(!d.contains(ev.target)) d.open=false; }); },true);
+$("#q").addEventListener("input",ev=>{ state.q=norm(ev.target.value.trim()); state.pag=1; refrescar(); });
+$("#limpiar").onclick=()=>{ state.filtros={}; state.q=""; $("#q").value=""; refrescar(); };
+$("#preset-mop").onclick=()=>{ state.filtros={relevancia_mop:new Set(["directa","indirecta"]),amenazas:new Set(["A01","A02","A03","A09"])}; refrescar(); };
+$("#preset-sbn").onclick=()=>{ state.filtros={es_sbn:new Set(["sbn","potencial_sbn"])}; refrescar(); };
+$("#btn-chile").onclick=()=>{ state.zoomReg=null; dibujarMapa(); actualizarBotonesMapa(); };
+$("#btn-selreg").onclick=()=>{ T.filter(t=>t.reg===state.zoomReg&&!ISLAS.includes(t.cut)).forEach(t=>state.sel.add(t.cut)); refrescar(); };
+$("#btn-limpiar-sel").onclick=()=>{ state.sel.clear(); refrescar(); };
+const selM=$("#metrica"); METRICAS.forEach(m=>{ const o=document.createElement("option"); o.value=m.k; o.textContent=m.l; if(m.k==="pob"&&!D.meta.poblacion_fuente){ o.disabled=true; o.textContent+=" (sin población cargada)"; } selM.appendChild(o); });
+selM.onchange=()=>{ state.metrica=selM.value; refrescar(); };
+$("#tabs").addEventListener("click",ev=>{ const b=ev.target.closest("button"); if(!b) return; state.vista=b.dataset.v; document.querySelectorAll("#tabs button").forEach(x=>x.classList.toggle("on",x===b)); render(); });
+
+// ---------- vistas ----------
+function selMedidas(){ return F.filter(enSeleccion); }
+function distrib(ids,cat){ const c=new Map(); const V=vals(cat); ids.forEach(i=>{ const v=V[i]; (Array.isArray(v)?v:[v]).forEach(x=>c.set(x,(c.get(x)||0)+1)); }); return [...c.entries()].sort((a,b)=>b[1]-a[1]); }
+function barras(cat,pairs,tot,max=10,onClick=true){ if(!pairs.length) return '<div class="vacio">Sin datos.</div>'; const mx=pairs[0][1];
+  return `<div class="bars">${pairs.slice(0,max).map(([k,v])=>`<span class="k" title="${h(et(cat,k))}${onClick?" · clic para filtrar":""}" data-cat="${cat}" data-v="${k==null?"__null":h(k)}">${h(etShort(cat,k))}</span><span class="b"><i style="width:${(v/mx*100).toFixed(1)}%"></i></span><span class="n">${fmt(v)}</span>`).join("")}</div>${pairs.length>max?`<div class="small muted" style="margin-top:4px">… y ${pairs.length-max} más</div>`:""}`; }
+function apilado(cat,pairs,tot,colores){ const leg=[]; const segs=pairs.map(([k,v],i)=>{ const col=colores[i%colores.length]; leg.push(`<span><span class="sw" style="background:${col}"></span>${h(et(cat,k))} <span class="mono">${fmt(v)} · ${Math.round(v/tot*100)}%</span></span>`); return `<i style="width:${(v/tot*100).toFixed(2)}%;background:${col}" title="${h(et(cat,k))}: ${fmt(v)}"></i>`; }).join("");
+  return `<div class="stack">${segs}</div><div class="stack-leg">${leg.join("")}</div>`; }
+const COLS=["var(--c1)","var(--c2)","var(--c3)","var(--c4)","var(--c5)","var(--c6)","var(--c7)","var(--c8)"];
+function conceptos(ids){ if(!D.vocab) return []; const tf=new Map(); ids.forEach(i=>M.terminos[i].forEach(t=>tf.set(t,(tf.get(t)||0)+1)));
+  const n=ids.length; const out=[]; tf.forEach((c,t)=>{ if(c<2) return; const idf=Math.log(N/D.vocab_df[t]); out.push([t,c,c*idf]); }); out.sort((a,b)=>b[2]-a[2]); return out.slice(0,18); }
+function card(titulo,cuerpo,src,extra=""){ return `<section class="card"><h2>${h(titulo)}${src?`<span class="src" title="Procedencia: ${h(src)}">ⓘ</span>`:""}</h2>${cuerpo}${extra}</section>`; }
+
+// ---------- síntesis pre-hechas ----------
+function unidadSel(){
+  if(state.sel.size===1){ const c=[...state.sel][0], t=tByCut.get(c); return {k:"comuna_"+c, t:"Comuna de "+(t?.comuna||c)}; }
+  const regs=regionesSel();
+  if(state.sel.size>1&&regs.size===1){ const r=[...regs][0]; return {k:"region_"+r, t:"Región de "+regNombre[r], nota:"La síntesis corresponde a la región completa (PACCC de sus comunas y PARCC), no solo a las comunas seleccionadas."}; }
+  if(state.sel.size===0&&state.zoomReg) return {k:"region_"+state.zoomReg, t:"Región de "+regNombre[state.zoomReg]};
+  return null; }
+function linkMedida(id){ const i=ID2I.get(id); return i==null?`<span class="lnk off">${h(id)}</span>`:`<span class="lnk" data-mi="${i}" title="Abrir ficha">${h(id)}</span>`; }
+function htmlSintesis(k,titulo,nota){
+  if(!SINT) return ""; const u=SINT.unidades[k]; if(!u) return `<div class="sint"><div class="cab"><span class="eyebrow">Síntesis</span><b>${h(titulo)}</b></div><div class="muted small">No hay síntesis generada para esta unidad.</div></div>`;
+  const mt=SINT.meta||{};
+  return `<div class="sint"><div class="cab"><span class="eyebrow">Síntesis generada por IA</span><b>${h(titulo)}</b></div>
+   ${nota?`<div class="small muted">${h(nota)}</div>`:""}
+   <p>${h(u.sintesis)}</p>
+   ${(u.enfasis||[]).length?`<div class="tags" style="margin:6px 0">${u.enfasis.map(e=>`<span class="tag" style="cursor:default">${h(e)}</span>`).join("")}</div>`:""}
+   ${(u.brechas||[]).length?`<h3 style="margin-top:8px">Brechas frente a las amenazas declaradas por el plan</h3><ul>${u.brechas.map(b=>`<li>${h(b.texto)} <span class="muted small">Evidencia: ${h(b.evidencia)}</span></li>`).join("")}</ul>`:""}
+   ${(u.medidas_representativas||[]).length?`<h3 style="margin-top:8px">Medidas representativas</h3><ul>${u.medidas_representativas.map(m=>`<li>${linkMedida(m.id_medida)} ${h(m.por_que)}</li>`).join("")}</ul>`:""}
+   ${(u.advertencias||[]).length?`<h3 style="margin-top:8px">Advertencias</h3><ul>${u.advertencias.map(a=>`<li class="small">${h(a)}</li>`).join("")}</ul>`:""}
+   <div class="meta">Generada el ${h(mt.generado||"")} con ${h(mt.modelo_territorio||"un modelo de lenguaje")} sobre todas las medidas de la unidad; no cambia con los filtros temáticos. ${h(mt.aviso||"")} Las brechas comparan las amenazas que el plan declara (en texto literal) con los códigos de amenaza de sus medidas.</div></div>`; }
+
+// ---------- análisis a demanda (solo dentro de claude.ai) ----------
+let SAMPLE=null; const IA={key:null,text:"",estado:"",ctl:null};
+function claveSel(){ return JSON.stringify([[...state.sel].sort(),state.zoomReg,Object.entries(state.filtros).map(([k,v])=>[k,[...v].sort()]),state.q]); }
+function describirSel(){ const cs=comunasSel(); const regs=regionesSel();
+  let d=state.sel.size?`${cs.length} comuna(s): ${cs.slice(0,40).map(c=>c.comuna+" ("+c.region+")").join(", ")}${cs.length>40?"…":""}`:"todo el país";
+  const f=Object.entries(state.filtros).map(([k,v])=>`${LABEL[k]}: ${[...v].map(x=>et(k,x)).join(" o ")}`); if(state.q) f.push(`texto: "${state.q}"`);
+  return {d, f:f.length?f.join("; "):"ninguno", nreg:regs.size}; }
+function promptIA(ids){
+  const S=describirSel(); const cnt=(cat)=>distrib(ids,cat).slice(0,12).map(([k,v])=>`${k??"sin dato"}:${v}`).join(", ");
+  let sel=ids;
+  if(ids.length>220){ const pri=i=>(DICC.relevancia_mop[M.relevancia_mop[i]]==="directa"?0:/^(sbn)$/.test(DICC.es_sbn[M.es_sbn[i]]||"")?1:DICC.intervencion[M.intervencion[i]]==="implementacion"?2:3);
+    const ord=ids.slice().sort((a,b)=>pri(a)-pri(b)||a-b); const top=ord.slice(0,110); const resto=ord.slice(110); const paso=resto.length/110; sel=top.concat(Array.from({length:110},(_,j)=>resto[Math.floor(j*paso)]).filter(x=>x!=null)); }
+  const lin=sel.map(i=>{ const d=(DET&&DET[i])||{}; const inst=I[M.inst[i]]; return `${d.id_medida||inst.id+"#"+(M.codigo[i]||i)} | ${inst.comuna||inst.region} | ${M.nombre[i]} | ${DICC.tipo[M.tipo[i]]} | ${M.amenazas[i]||""} | ${DICC.intervencion[M.intervencion[i]]} | ${DICC.naturaleza[M.naturaleza[i]]} | ${DICC.es_sbn[M.es_sbn[i]]} | ${(d.resumen||"").slice(0,170)}`; }).join("\n");
+  return `Eres analista de planes de cambio climático de Chile. Analiza el conjunto de medidas comunales (PACCC) que se entrega abajo, seleccionado por un usuario en un visor de la base nacional de medidas.
+
+Selección territorial: ${S.d}.
+Filtros temáticos activos: ${S.f}.
+
+Reglas: escribe en español formal y directo; usa solo los datos entregados, sin conocimiento externo sobre los territorios; las cifras deben salir del cuadro de conteos; cita medidas por su identificador exacto (primera columna); si la muestra no permite afirmar algo, dilo. Las clasificaciones fueron hechas por un modelo de lenguaje.
+
+Estructura (texto plano, títulos en una línea propia, 250 a 400 palabras en total):
+Panorama
+Énfasis temáticos
+Respuesta a amenazas
+Soluciones basadas en la naturaleza y obras físicas
+Diferencias entre comunas (solo si hay más de una comuna)
+Medidas destacadas (3 a 5, con identificador y una frase)
+Limitaciones
+
+=== CUADRO DE CONTEOS (sobre las ${ids.length} medidas) ===
+tipo: ${cnt("tipo")}
+intervención: ${cnt("intervencion")}
+naturaleza: ${cnt("naturaleza")}
+es_sbn: ${cnt("es_sbn")}
+amenazas: ${cnt("amenazas")}
+tema NDC: ${cnt("tema")}
+relevancia Agenda de Resiliencia: ${cnt("relevancia_mop")}
+comunas con más medidas: ${d3.rollups(ids,v=>v.length,i=>I[M.inst[i]].comuna).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([c,v])=>c+":"+v).join(", ")}
+
+=== MEDIDAS (${sel.length}${sel.length<ids.length?` de ${ids.length}: las de relevancia directa, SbN e implementación primero, luego una muestra regular del resto`:""}) ===
+id | comuna | nombre | tipo | amenazas | intervención | naturaleza | es_sbn | resumen
+${lin}`; }
+async function correrIA(){ const ids=selMedidas(); if(!SAMPLE||!ids.length) return;
+  IA.ctl?.abort(); IA.ctl=new AbortController(); IA.key=claveSel(); IA.text=""; IA.estado="Pensando… (la primera vez Claude pide tu autorización)"; pintarIA();
+  try{ const r=await SAMPLE(promptIA(ids),{signal:IA.ctl.signal,onText:({text})=>{ IA.text=text; IA.estado="Escribiendo…"; pintarIA(); }});
+    IA.text=r.text; IA.estado=r.truncated?"Respuesta cortada por longitud.":`Listo · ${new Date().toLocaleTimeString("es-CL",{hour:"2-digit",minute:"2-digit"})}`; }
+  catch(e){ IA.text=e.text||""; const msg={cancelled:"Detenido.",not_granted:"No autorizaste el uso de Claude en esta página; el análisis queda desactivado.",sampling_disabled:"Claude no está disponible para tu cuenta.",rate_limited:"Límite de uso alcanzado; intenta más tarde.",prompt_too_large:"La selección es demasiado grande; acota con filtros.",refused:"Claude no respondió a esta solicitud."}[e.code]||"No se pudo completar el análisis; intenta de nuevo.";
+    IA.estado=msg; if(["not_granted","sampling_disabled","not_declared","capability_disabled","capability_removed"].includes(e.code)) SAMPLE=null; }
+  pintarIA(); }
+function htmlIA(n){ if(!SAMPLE) return ""; const vig=IA.key===claveSel();
+  return `<section class="card" style="margin-bottom:14px" id="ia-card"><h2>Análisis de esta selección <span class="src" title="Se ejecuta con tu cuenta de Claude y consume tu uso">ⓘ</span></h2>
+   <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button class="btn primary" id="ia-run" ${n?"":"disabled"}>${vig&&IA.text?"Volver a analizar":"Analizar esta selección"}</button><button class="btn" id="ia-stop" ${IA.estado.startsWith("Pensando")||IA.estado.startsWith("Escribiendo")?"":"hidden"}>Detener</button><span class="small muted" id="ia-estado">${h(vig?IA.estado:"Claude redacta un análisis de las medidas que cumplen la selección y los filtros actuales, citando cada medida.")}</span></div>
+   <div class="ia-out" id="ia-out" style="margin-top:10px">${vig?h(IA.text):""}</div>
+   ${vig&&IA.text?`<div class="meta small muted" style="margin-top:8px">Texto generado por IA a pedido, no revisado; verifica las medidas citadas en su ficha.</div>`:""}</section>`; }
+function pintarIA(){ const c=$("#ia-card"); if(!c) return; c.outerHTML=htmlIA(selMedidas().length); }
+
+function vResumen(){
+  const ids=selMedidas(); const cs=comunasSel(); const regs=regionesSel();
+  const conPlan=cs.filter(c=>c.nm>0).length, cParcial=cs.filter(c=>c.estado==="parcial").length, cSin=cs.filter(c=>c.estado==="ausente"||c.estado==="sin_plan").length, cPend=cs.filter(c=>["pendiente","sin_medidas","excluido"].includes(c.estado)).length;
+  const insts=new Set(ids.map(i=>M.inst[i])); const conCosto=ids.filter(i=>M.costo_clp[i]>0); const costo=d3.sum(conCosto,i=>M.costo_clp[i]);
+  const plazos=ids.map(i=>M.plazo_anios[i]).filter(x=>x>0); const medPlazo=plazos.length?d3.median(plazos):null;
+  const sbn=ids.filter(i=>/^(sbn|potencial_sbn)$/.test(DICC.es_sbn[M.es_sbn[i]]||"")).length;
+  const dir=ids.filter(i=>DICC.relevancia_mop[M.relevancia_mop[i]]==="directa").length, ind=ids.filter(i=>DICC.relevancia_mop[M.relevancia_mop[i]]==="indirecta").length;
+  const porCom=d3.rollups(ids,v=>v.length,i=>instCut[M.inst[i]]).sort((a,b)=>b[1]-a[1]);
+  const nPARCC=F.filter(i=>instTipo[M.inst[i]]==="PARCC"&&regs.has(instReg[M.inst[i]])).length, nPSA=F.filter(i=>instTipo[M.inst[i]]==="PSA").length;
+  let html=`<div class="kpis">
+    <div class="kpi"><div class="v">${fmt(cs.length)}</div><div class="l">comunas seleccionadas</div><div class="s">${fmt(conPlan)} con medidas · ${fmt(cParcial)} parciales · ${fmt(cSin)} sin plan en el corpus · ${fmt(cPend)} con plan sin medidas extraídas</div></div>
+    <div class="kpi"><div class="v">${fmt(ids.length)}</div><div class="l">medidas comunales (PACCC)</div><div class="s">${fmt(insts.size)} planes · además ${fmt(nPARCC)} PARCC y ${fmt(nPSA)} PSA que aplican (pestaña PARCC y PSA)</div></div>
+    <div class="kpi"><div class="v">${ids.length?Math.round(sbn/ids.length*100):0}%</div><div class="l">SbN o potencial SbN</div><div class="s">${fmt(sbn)} medidas</div></div>
+    <div class="kpi"><div class="v">${fmt(dir)}</div><div class="l">relevancia directa Agenda de Resiliencia</div><div class="s">${fmt(ind)} indirectas · A01–A03 y A09 con producto físico</div></div>
+    <div class="kpi"><div class="v">$ ${fmtCLP(costo)}</div><div class="l">costo declarado (CLP)</div><div class="s">${fmt(conCosto.length)} de ${fmt(ids.length)} medidas declaran costo (${ids.length?Math.round(conCosto.length/ids.length*100):0}%)</div></div>
+    <div class="kpi"><div class="v">${medPlazo?fmt(medPlazo)+(medPlazo===1?" año":" años"):"—"}</div><div class="l">plazo mediano</div><div class="s">${fmt(plazos.length)} medidas con plazo</div></div>
+  </div>`;
+  const u=unidadSel(); html=(u?htmlSintesis(u.k,u.t,u.nota):"")+htmlIA(ids.length)+html;
+  if(!ids.length){ html+='<div class="vacio">Ninguna medida comunal cumple los filtros en la selección.</div>'; return html; }
+  const con=conceptos(ids);
+  html+=`<div class="grid2">
+    ${card("Tipo canónico",apilado("tipo",distrib(ids,"tipo"),ids.length,COLS),PROC.tipo)}
+    ${card("Intervención FAO",apilado("intervencion",distrib(ids,"intervencion"),ids.length,COLS),PROC.intervencion)}
+    ${card("Naturaleza de la intervención",barras("naturaleza",distrib(ids,"naturaleza"),ids.length),PROC.naturaleza)}
+    ${card("SbN y confianza",apilado("es_sbn",distrib(ids,"es_sbn"),ids.length,[COLS[2],COLS[3],"var(--line-2)",COLS[6]])+'<div style="height:8px"></div>'+apilado("confianza",distrib(ids,"confianza"),ids.length,[COLS[0],COLS[1],COLS[6],"var(--line-2)"]),PROC.es_sbn)}
+    ${card("Conceptos principales",con.length?`<div class="tags">${con.map(([t,c])=>`<span class="tag" data-term="${h(D.vocab[t])}" title="Buscar «${h(D.vocab[t])}»">${h(D.vocab[t])}<span class="n">${c}</span></span>`).join("")}</div><div class="small muted" style="margin-top:8px">Términos más distintivos de la selección (TF-IDF sobre nombre, indicador y meta; el número es cuántas medidas lo usan).</div>`:'<div class="vacio">Se necesitan al menos dos medidas.</div>',"Cálculo en el visor, sin modelo")}
+    ${card("Comunas con más medidas",barras("comuna",porCom.map(([c,v])=>[c,v]).map(([c,v])=>[tByCut.get(c)?.comuna||c,v]),ids.length,10,false),"Conteo de medidas PACCC")}
+    ${card("Amenazas canónicas",barras("amenazas",distrib(ids,"amenazas").filter(([k])=>k),ids.length),PROC.amenazas,'<div class="small muted" style="margin-top:6px">Una medida puede responder a varias amenazas; A99 = multi-amenaza o no específica.</div>')}
+    ${card("Temas NDC",barras("tema",distrib(ids,"tema").filter(([k])=>k),ids.length,12),PROC.tema)}
+    ${card("Sector Ley 21.455",barras("sector",distrib(ids,"sector").filter(([k])=>k),ids.length),PROC.sector)}
+    ${card("Agenda de Resiliencia MOP–MMA: servicios pertinentes",barras("mop",distrib(ids.filter(i=>DICC.relevancia_mop[M.relevancia_mop[i]]!=="ninguna"),"mop").filter(([k])=>k&&k!=="ninguno"),ids.length),PROC.mop,'<div class="small muted" style="margin-top:6px">Solo medidas con relevancia directa o indirecta.</div>')}
+    ${card("PNACC 2025–2028: lineamientos transversales",barras("pnacc_lt",distrib(ids,"pnacc_lt").filter(([k])=>k),ids.length),PROC.pnacc_lt,`<div class="small muted" style="margin-top:6px">${fmt(ids.filter(i=>vals("pnacc_lt")[i].length).length)} de ${fmt(ids.length)} medidas vinculadas a algún lineamiento.</div>`)}
+    ${card("PNACC: objetivos específicos",barras("pnacc_oe",distrib(ids,"pnacc_oe").filter(([k])=>k),ids.length),PROC.pnacc_oe)}
+    ${card("Responsables más frecuentes",DET?barras("resp",d3.rollups(ids.filter(i=>DET[i]?.responsable),v=>v.length,i=>DET[i].responsable.trim().replace(/\s+/g," ").slice(0,60)).sort((a,b)=>b[1]-a[1]),ids.length,10,false):'<div class="vacio">Cargando detalle…</div>',"Texto literal del plan, agrupado por coincidencia exacta")}
+  </div>`;
+  return html;
+}
+function vMedidas(){
+  let ids=selMedidas(); const o=state.orden;
+  const key={comuna:i=>tByCut.get(instCut[M.inst[i]])?.comuna||"",codigo:i=>M.codigo[i]||"",nombre:i=>M.nombre[i]||"",tipo:i=>DICC.tipo[M.tipo[i]]||"",amenaza:i=>M.amenazas[i]||"",es_sbn:i=>DICC.es_sbn[M.es_sbn[i]]||"",mop:i=>DICC.relevancia_mop[M.relevancia_mop[i]]||"",costo:i=>M.costo_clp[i]||0,confianza:i=>({alta:0,media:1,baja:2}[DICC.confianza[M.confianza[i]]]??3)}[o.k];
+  ids=ids.slice().sort((a,b)=>{const x=key(a),y=key(b); return (x<y?-1:x>y?1:0)*(o.asc?1:-1);});
+  const porPag=100, tot=ids.length, pag=Math.min(state.pag,Math.ceil(tot/porPag)||1); const visibles=ids.slice((pag-1)*porPag,pag*porPag);
+  const th=(k,l)=>`<th data-k="${k}">${l} <span class="ord">${o.k===k?(o.asc?"▲":"▼"):""}</span></th>`;
+  let html=`<div class="tbl-tools"><span><b>${fmt(tot)}</b> medidas comunales en la selección</span><button class="btn sm" id="csv">Copiar CSV</button><button class="btn sm" id="csv-dl" hidden>Descargar CSV</button><span class="muted" id="csv-msg"></span>
+    <span style="margin-left:auto">Página ${pag} de ${Math.ceil(tot/porPag)||1} <button class="btn sm" id="pprev" ${pag<=1?"disabled":""}>‹</button> <button class="btn sm" id="pnext" ${pag*porPag>=tot?"disabled":""}>›</button></span></div>
+  <div class="tbl-wrap"><table><thead><tr>${th("comuna","Comuna")}${th("codigo","Código")}${th("nombre","Medida")}${th("tipo","Tipo")}${th("amenaza","Amenazas")}${th("es_sbn","SbN")}${th("mop","Agenda MOP")}${th("costo","Costo CLP")}${th("confianza","Confianza")}</tr></thead><tbody>`;
+  visibles.forEach(i=>{ const inst=I[M.inst[i]]; const sb=DICC.es_sbn[M.es_sbn[i]], rm=DICC.relevancia_mop[M.relevancia_mop[i]], cf=DICC.confianza[M.confianza[i]];
+    html+=`<tr><td>${h(inst.comuna)}<div class="cod">${h(inst.reg)} · ${h(inst.estado||"")}</div></td><td class="cod">${h(M.codigo[i]||"")}</td><td class="nom" data-i="${i}">${h(M.nombre[i])}</td><td>${h(et("tipo",DICC.tipo[M.tipo[i]]))}</td><td class="cod">${h(M.amenazas[i]||"")}</td><td>${sb&&sb!=="no_sbn"?`<span class="pill sbn">${h(et("es_sbn",sb))}</span>`:""}</td><td>${rm&&rm!=="ninguna"?`<span class="pill ${rm==="directa"?"dir":""}">${h(RELEV_ET[rm])}</span>`:""}</td><td class="num">${M.costo_clp[i]?fmt(M.costo_clp[i]):""}</td><td><span class="pill conf-${h(cf)}">${h(CONF_ET[cf]||"")}</span></td></tr>`; });
+  html+="</tbody></table></div>";
+  setTimeout(()=>{ document.querySelectorAll("th[data-k]").forEach(t=>t.onclick=()=>{ if(state.orden.k===t.dataset.k) state.orden.asc=!state.orden.asc; else state.orden={k:t.dataset.k,asc:true}; render(); });
+    $("#pprev").onclick=()=>{state.pag=pag-1;render();}; $("#pnext").onclick=()=>{state.pag=pag+1;render();};
+    $("#csv").onclick=()=>copiarCSV(ids); const dl=$("#csv-dl"); if(downloads){ dl.hidden=false; dl.onclick=()=>descargarCSV(ids); } },0);
+  return html;
+}
+function csvDe(ids){ const cab=["id_instrumento","comuna","region","codigo","nombre","tipo","amenazas","amenaza_principal","vinculo","sector","tema","intervencion","naturaleza","es_sbn","tipologia","servicio_mop","relevancia_agenda","financiamiento","pnacc_lt","costo_clp","plazo_anios","confianza","responsable","indicador","meta","pagina_inicio","pagina_fin"];
+  const esc=s=>{ s=s==null?"":String(s); return /[",\n;]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; };
+  const rows=ids.map(i=>{ const inst=I[M.inst[i]], d=(DET&&DET[i])||{}; return [inst.id,inst.comuna,inst.region,M.codigo[i],M.nombre[i],DICC.tipo[M.tipo[i]],M.amenazas[i],DICC.amenaza_principal[M.amenaza_principal[i]],DICC.vinculo[M.vinculo[i]],DICC.sector[M.sector[i]],DICC.tema[M.tema[i]],DICC.intervencion[M.intervencion[i]],DICC.naturaleza[M.naturaleza[i]],DICC.es_sbn[M.es_sbn[i]],DICC.tipologia[M.tipologia[i]],DICC.mop[M.mop[i]],DICC.relevancia_mop[M.relevancia_mop[i]],DICC.financiamiento[M.financiamiento[i]],DICC.pnacc_lt[M.pnacc_lt[i]],M.costo_clp[i],M.plazo_anios[i],DICC.confianza[M.confianza[i]],d.responsable,d.indicador,d.meta,M.pagina_inicio[i],M.pagina_fin[i]].map(esc).join(";"); });
+  return "﻿"+cab.join(";")+"\n"+rows.join("\n"); }
+async function copiarCSV(ids){ const msg=$("#csv-msg"); try{ await navigator.clipboard.writeText(csvDe(ids)); msg.textContent="Copiado al portapapeles (separador ;)."; }catch(e){ const ta=document.createElement("textarea"); ta.value=csvDe(ids); ta.style.cssText="position:fixed;left:-9999px"; document.body.appendChild(ta); ta.select(); try{document.execCommand("copy"); msg.textContent="Copiado.";}catch(_){ msg.textContent="No se pudo copiar; selecciona la tabla manualmente."; } ta.remove(); } setTimeout(()=>msg.textContent="",4000); }
+async function descargarCSV(ids){ const msg=$("#csv-msg"); try{ await downloads.save({filename:"medidas_seleccion.csv",data:csvDe(ids)}); msg.textContent="Archivo guardado."; }catch(e){ msg.textContent=e?.code==="not_granted"?"Descarga no permitida; usa Copiar CSV.":"Descarga cancelada."; } setTimeout(()=>msg.textContent="",4000); }
+
+function vSuperior(){
+  const regs=regionesSel(); const parcc=F.filter(i=>instTipo[M.inst[i]]==="PARCC"&&regs.has(instReg[M.inst[i]])), psa=F.filter(i=>instTipo[M.inst[i]]==="PSA");
+  const lista=(ids,titulo,grupoFn)=>{ if(!ids.length) return card(titulo,'<div class="vacio">Ninguna medida cumple los filtros.</div>');
+    const g=d3.group(ids,grupoFn); let html="";
+    g.forEach((arr,k)=>{ const inst=I[M.inst[arr[0]]]; const sk=(inst.tipo==="PARCC"?"parcc_":"psa_")+inst.id; html+=`<h3 style="margin:10px 0 4px">${h(k)} <span class="muted small">· ${h(inst.estado||"")} · ${fmt(arr.length)} medidas</span></h3>${SINT&&SINT.unidades[sk]?`<details class="sdet"><summary>Síntesis generada por IA</summary>${htmlSintesis(sk,k)}</details>`:""}<div class="tbl-wrap"><table><tbody>${arr.map(i=>`<tr><td class="cod" style="width:70px">${h(M.codigo[i]||"")}</td><td class="nom" data-i="${i}">${h(M.nombre[i])}</td><td style="width:120px">${h(et("tipo",DICC.tipo[M.tipo[i]]))}</td><td class="cod" style="width:90px">${h(M.amenazas[i]||"")}</td><td style="width:90px">${DICC.es_sbn[M.es_sbn[i]]&&DICC.es_sbn[M.es_sbn[i]]!=="no_sbn"?`<span class="pill sbn">${h(et("es_sbn",DICC.es_sbn[M.es_sbn[i]]))}</span>`:""}</td></tr>`).join("")}</tbody></table></div>`; });
+    return card(titulo,html); };
+  const faltanParcc=[...regs].filter(r=>!I.some(i=>i.tipo==="PARCC"&&i.reg===r)).map(r=>regNombre[r]);
+  return `<div class="aviso">Las medidas regionales (PARCC) y sectoriales (PSA) se muestran aparte y no se suman al mapa comunal. Los PARCC cubren toda la región; los PSA son de alcance nacional y la base no registra aún su desagregación por macrozona o comuna. Sin PARCC en la base: ${faltanParcc.length?h(faltanParcc.join(", ")):"ninguna de las regiones seleccionadas"}.</div>
+  <div style="display:grid;gap:14px;margin-top:12px">${lista(parcc,`PARCC de ${regs.size===16?"las 16 regiones":"la selección"} (${fmt(parcc.length)} medidas)`,i=>"PARCC "+regNombre[instReg[M.inst[i]]])}${lista(psa,`Planes sectoriales de adaptación (${fmt(psa.length)} medidas)`,i=>"PSA "+et("sector",I[M.inst[i]].sector_psa))}</div>`;
+}
+function vRiesgo(){
+  const regs=regionesSel(); const cuts=new Set(comunasSel().map(c=>c.cut));
+  const insts=I.filter(i=>(i.tipo==="PACCC"&&cuts.has(i.cut))||(i.tipo==="PARCC"&&regs.has(i.reg))); const ids=new Set(insts.map(i=>i.id));
+  const A=D.amenaza_plan.filter(a=>ids.has(a.inst)); if(!A.length) return '<div class="vacio">Sin amenazas declaradas en los planes de la selección (capa de riesgo pendiente para algunos instrumentos).</div>';
+  const NIV=["muy_alto","alto","medio","bajo","muy_bajo","oportunidad","no_declarado"]; const NIV_ET={muy_alto:"Muy alto",alto:"Alto",medio:"Medio",bajo:"Bajo",muy_bajo:"Muy bajo",oportunidad:"Oportunidad",no_declarado:"No declarado"};
+  const porCod=d3.rollups(A,v=>v,a=>a.cod||"sin_codigo").sort((a,b)=>b[1].length-a[1].length);
+  let html=`<div class="aviso" style="border-left-color:var(--c7)"><b>Códigos no verificados.</b> La asignación de cada amenaza declarada a un código canónico (columna izquierda) tiene errores conocidos en esta versión: por ejemplo, en Valdivia "Remoción en masa" quedó como A06 e "Isla de calor" como A03. Use el texto literal y la página para cualquier conclusión; la corrida se repetirá.</div><div class="aviso">Riesgo <b>declarado por cada plan</b>, interpretado por el modelo a partir de texto, tablas o imágenes (campo I). La escala de cada plan es distinta; los niveles homogéneos vendrán de ARClim en la Fase 2. ${fmt(A.length)} registros en ${fmt(new Set(A.map(a=>a.inst)).size)} planes.</div>
+  <div class="tbl-wrap" style="margin-top:12px"><table><thead><tr><th>Amenaza canónica</th>${NIV.map(n=>`<th>${NIV_ET[n]}</th>`).join("")}<th>Total</th></tr></thead><tbody>`;
+  porCod.forEach(([cod,arr])=>{ const c=d3.rollup(arr,v=>v.length,a=>a.nivel||"no_declarado"); html+=`<tr><td>${cod==="sin_codigo"?'<span class="muted">sin código</span>':`<span class="cod">${h(cod)}</span> ${h(et("amenazas",cod))}`}</td>${NIV.map(n=>`<td class="num">${c.get(n)?fmt(c.get(n)):""}</td>`).join("")}<td class="num"><b>${fmt(arr.length)}</b></td></tr>`; });
+  html+="</tbody></table></div>";
+  const muestra=A.filter(a=>["muy_alto","alto"].includes(a.nivel)).slice(0,40);
+  if(muestra.length){ html+=`<h2 style="margin:16px 0 6px">Amenazas con nivel alto o muy alto (hasta 40)</h2><div class="tbl-wrap"><table><thead><tr><th>Plan</th><th>Amenaza literal</th><th>Canónica</th><th>Nivel</th><th>Sistema afectado</th><th>Pág.</th></tr></thead><tbody>${muestra.map(a=>`<tr><td class="cod">${h(a.inst)}</td><td>${h(a.lit)}</td><td class="cod">${h(a.cod||"")}</td><td>${h(NIV_ET[a.nivel]||a.nivel)}</td><td class="small">${h(a.sistema||"")}</td><td class="num">${h(a.pagina||"")}</td></tr>`).join("")}</tbody></table></div>`; }
+  return html;
+}
+function vMetodo(){
+  const r=D.cobertura.resumen; const cob=D.cobertura;
+  let html=`<div class="metodo">
+  <h2>Qué es esta base</h2><p>Base estructurada de las medidas de los Planes de Acción Comunal (PACCC), Regionales (PARCC) y Sectoriales de Adaptación (PSA) de Chile, construida por lectura asistida por modelo de lenguaje de cada documento (Convenio MMA N°20260121_MMA_2_SbN_2026, programa DPS). Corte de datos: ${h(D.meta.generado)}. ${fmt(D.meta.n_medidas)} medidas, ${fmt(D.meta.n_acciones)} acciones y ${fmt(D.meta.n_amenazas)} amenazas declaradas en ${fmt(D.meta.n_instrumentos)} instrumentos.</p>
+  <div class="aviso">${h(D.meta.aviso)} Clasificaciones generadas por un modelo de lenguaje a partir del texto de cada instrumento; cada etiqueta cita la página y el pasaje que la respalda y debe verificarse antes de su uso oficial.</div>
+  <h2 style="margin-top:16px">Cobertura del corpus</h2>
+  <p>El visor mide la cobertura <b>del corpus procesado</b>, no la existencia oficial de planes: una comuna "sin plan en el corpus" puede no tener PACCC o tenerlo sin descargar. Esa distinción requiere la lista oficial de PACCC del MMA.</p>
+  <div class="kpis">${Object.entries(r.comunas_por_estado).map(([k,v])=>`<div class="kpi"><div class="v">${fmt(v)}</div><div class="l">${h(ESTADO_ET[k]||k)}</div></div>`).join("")}</div>
+  <h3 style="margin:14px 0 6px">Regiones (PARCC)</h3><div class="tbl-wrap"><table><thead><tr><th>Región</th><th>Instrumento</th><th>Estado</th><th>Medidas</th><th>Declaradas</th><th>Comunas con PACCC</th><th>Medidas comunales</th></tr></thead><tbody>${cob.regiones.map(x=>`<tr><td>${h(x.region)}</td><td class="cod">${h(x.id_instrumento||"")}</td><td>${h(x.estado)}</td><td class="num">${fmt(x.n_medidas)}</td><td class="num">${fmt(x.n_declaradas)}</td><td class="num">${fmt(x.comunas_con_paccc)} / ${fmt(x.comunas_total)}</td><td class="num">${fmt(x.medidas_comunales)}</td></tr>`).join("")}</tbody></table></div>
+  <h3 style="margin:14px 0 6px">Sectores (PSA)</h3><div class="tbl-wrap"><table><thead><tr><th>Sector</th><th>Instrumento</th><th>Estado</th><th>Medidas</th><th>Declaradas</th></tr></thead><tbody>${cob.sectores.map(x=>`<tr><td>${h(et("sector",x.sector))}</td><td class="cod">${h(x.id_instrumento||"")}</td><td>${h(x.estado)}</td><td class="num">${fmt(x.n_medidas)}</td><td class="num">${fmt(x.n_declaradas)}</td></tr>`).join("")}</tbody></table></div>
+  <h3 style="margin:14px 0 6px">Comunas con plan pero lectura incompleta</h3><div class="tbl-wrap"><table><thead><tr><th>Comuna</th><th>Región</th><th>Estado</th><th>Medidas</th><th>Declaradas</th><th>Causa</th></tr></thead><tbody>${T.filter(t=>["parcial","sin_medidas","pendiente","sin_plan","excluido"].includes(t.estado)).sort((a,b)=>a.reg.localeCompare(b.reg)).map(t=>`<tr><td>${h(t.comuna)}</td><td>${h(t.region)}</td><td>${h(ESTADO_ET[t.estado]||t.estado)}</td><td class="num">${fmt(t.nm)}</td><td class="num">${fmt(t.n_decl)}</td><td class="small">${h(t.causa||"")}</td></tr>`).join("")}</tbody></table></div>
+  <h2 style="margin-top:18px">Campos y marcas</h2><p>Los campos <b>literales (L)</b> se extraen del documento tal cual: código, nombre, responsable, indicador, meta, plazo, costo, páginas. Los campos <b>interpretados (I)</b> son clasificaciones del modelo, cada una con nivel de confianza (alta, media, baja), cita textual de hasta 300 caracteres y página. La base no contiene todavía el objetivo ni la descripción de cada medida; los conceptos principales se calculan sobre nombre, indicador y meta.</p>
+  <h2 style="margin-top:14px">Taxonomías y procedencia</h2><div class="tbl-wrap"><table><thead><tr><th>Campo</th><th>Procedencia</th><th>Valores</th></tr></thead><tbody>${FILTRO_CATS.filter(c=>c!=="tinst"&&c!=="estado").map(c=>`<tr><td>${h(LABEL[c])}</td><td class="small">${h(PROC[c]||"")}</td><td class="small">${h(ordenValores(c,[...conteos(c).keys()].filter(k=>k!=null)).map(k=>et(c,k)).join(" · "))}</td></tr>`).join("")}</tbody></table></div>
+  <h2 style="margin-top:14px">Textos generados por IA</h2><p>El resumen y el objetivo de cada medida se extrajeron de las fichas con ${h(D.meta.modelo_resumenes?.modelo_medida||"un modelo de lenguaje")} (${fmt(D.meta.n_resumenes_medida)} medidas con resumen); el objetivo es copia literal del plan cuando existe y el resumen lleva confianza, cita y página. Las síntesis por región, comuna, PARCC y PSA (${fmt(D.meta.n_sintesis)}) se generaron con ${h(D.meta.modelo_resumenes?.modelo_territorio||"un modelo de lenguaje")} sobre todas las medidas de cada unidad. Dentro de claude.ai, el botón "Analizar esta selección" pide a Claude un análisis de la selección actual con la cuenta de quien lo usa; en la versión pública fuera de claude.ai ese botón no aparece.</p>
+  <h2 style="margin-top:14px">Geometría y territorio</h2><p>Límites comunales de la Mapoteca de la Biblioteca del Congreso Nacional (SIIT, capa "comunas", 2019), reproyectados a WGS84 y simplificados para el visor; Rapa Nui y Juan Fernández como botones; la comuna Antártica no está en la capa y no tiene PACCC en el corpus. Códigos únicos territoriales según la División Político-Administrativa oficial; los códigos de la Región de Ñuble se verificaron contra la capa BCN y la tabla DPA publicada por MINSAL. ${D.meta.poblacion_fuente?"Población: "+h(D.meta.poblacion_fuente)+".":"La población comunal no está cargada; la métrica por habitante queda desactivada."}</p>
+  <h2 style="margin-top:14px">Antecedentes</h2><p>"Análisis de medidas PACCC" y "Matriz de medidas PACCC" (MMA, DCC–Finanzas Climáticas, ene-2026: 74 PACCC, 1.817 medidas); FAO/FVC "Fomento de las SbN para Chile" (911 acciones de PSA y PARCC); DS N°14/2025 MMA, Plan Nacional de Adaptación 2025–2028; Guía para incorporar SbN en los planes de adaptación (MMA, 2025); Minuta Alianza estratégica MMA–MOP (borrador oct-2026).</p>
+  </div>`;
+  return html;
+}
+function ficha(i){ const inst=I[M.inst[i]]; const d=(DET&&DET[i])||{}; const t=tByCut.get(inst.cut);
+  const f=(k,v,wide)=>v==null||v===""?"":`<div class="f ${wide?"wide":""}"><div class="k">${h(k)}</div><div class="v">${h(v)}</div></div>`;
+  const cl=(cat,v)=>`<div class="r"><span class="k">${h(LABEL[cat]||cat)}</span><span>${Array.isArray(v)?v.map(x=>`<span class="cod">${h(x)}</span> ${h(et(cat,x))}`).join(" · "):`${v?`<span class="cod">${h(v)}</span> `:""}${h(et(cat,v))}`}</span></div>`;
+  const cats=["tipo","amenazas","vinculo","sector","tema","intervencion","naturaleza","es_sbn","tipologia","mop","relevancia_mop","financiamiento","pnacc_oe","pnacc_le","pnacc_lt","enfoques"];
+  const html=`<div class="modal-bg" id="mbg"><div class="modal" role="dialog" aria-modal="true" aria-label="Ficha de medida"><button class="btn sm cerrar" id="mcerrar">Cerrar ✕</button>
+    <div class="eyebrow">${h(inst.tipo)} · ${h(inst.comuna||inst.region||et("sector",inst.sector_psa))} · <span class="mono">${h(M.codigo[i]||"sin código")}</span></div>
+    <h2>${h(M.nombre[i])}</h2>
+    <div class="small muted" style="margin-top:4px">${h(inst.nombre||inst.id)} · ${h(inst.estado||"")} · páginas ${h(M.pagina_inicio[i]||"?")}–${h(M.pagina_fin[i]||"?")} · archivo <span class="mono">${h(inst.fuente||inst.id)}</span></div>
+    ${d.resumen?`<div class="sint" style="margin-top:12px;margin-bottom:0"><div class="cab"><span class="eyebrow">Resumen (IA)</span><span class="pill conf-${h(d.resumen_conf)}">confianza ${h(CONF_ET[d.resumen_conf]||d.resumen_conf||"")}</span></div><p style="margin:2px 0">${h(d.resumen)}</p>${d.resumen_cita?`<div class="cita">«${h(d.resumen_cita)}» <span class="mono">p. ${h(d.resumen_pag||"?")}</span></div>`:""}</div>`:""}
+    <div class="ficha">${f("Objetivo (texto del plan)",d.objetivo,true)}${f("Tipo según el plan",d.tipo_original)}${f("Responsable",d.responsable)}${f("Coadyuvantes",d.coadyuvantes)}${f("Plazo",d.plazo_literal?d.plazo_literal+(M.plazo_anios[i]?` (${M.plazo_anios[i]} años)`:""):(M.plazo_anios[i]?M.plazo_anios[i]+" años":null))}${f("Costo",d.costo_literal?d.costo_literal+(M.costo_clp[i]?` ≈ $ ${fmt(M.costo_clp[i])}`:""):(M.costo_clp[i]?"$ "+fmt(M.costo_clp[i]):null))}${f("Fuente de financiamiento",d.fuente_financiamiento)}${f("Indicador",d.indicador,true)}${f("Meta",d.meta,true)}</div>
+    <h3 style="margin-top:14px">Clasificación (interpretada por el modelo) · confianza <span class="pill conf-${h(DICC.confianza[M.confianza[i]])}">${h(CONF_ET[DICC.confianza[M.confianza[i]]]||"sin dato")}</span></h3>
+    <div class="clas">${cats.map(c=>cl(c,vals(c)[i])).join("")}</div>
+    ${d.cita?`<div class="cita">«${h(d.cita)}» <span class="mono">p. ${h(d.cita_pagina||"?")}</span></div>`:""}${d.cita_sbn?`<div class="cita">SbN: «${h(d.cita_sbn)}»</div>`:""}
+    <div class="small muted" style="margin-top:10px">id_medida: <span class="mono">${h(d.id_medida||"")}</span>${t?` · CUT ${h(t.cut)}`:""}</div>
+  </div></div>`;
+  $("#modal").innerHTML=html; $("#mcerrar").onclick=cerrar; $("#mbg").onclick=ev=>{ if(ev.target.id==="mbg") cerrar(); }; document.addEventListener("keydown",escCerrar); $("#mcerrar").focus(); }
+function cerrar(){ $("#modal").innerHTML=""; document.removeEventListener("keydown",escCerrar); }
+function escCerrar(ev){ if(ev.key==="Escape") cerrar(); }
+document.addEventListener("click",ev=>{ const n=ev.target.closest("td.nom[data-i]"); if(n){ ficha(+n.dataset.i); return; }
+  const mi=ev.target.closest(".lnk[data-mi]"); if(mi){ ficha(+mi.dataset.mi); return; }
+  if(ev.target.closest("#ia-run")){ correrIA(); return; } if(ev.target.closest("#ia-stop")){ IA.ctl?.abort(); return; }
+  const k=ev.target.closest(".bars .k[data-cat]"); if(k&&k.dataset.cat!=="comuna"&&k.dataset.cat!=="resp"){ const cat=k.dataset.cat, v=k.dataset.v==="__null"?null:k.dataset.v; state.filtros[cat]=new Set([v]); state.pag=1; refrescar(); return; }
+  const tg=ev.target.closest(".tag[data-term]"); if(tg){ $("#q").value=tg.dataset.term; state.q=norm(tg.dataset.term); state.pag=1; refrescar(); } });
+
+function render(){ const V={resumen:vResumen,medidas:vMedidas,superior:vSuperior,riesgo:vRiesgo,metodo:vMetodo}; $("#vista").innerHTML=V[state.vista](); }
+function refrescar(){ recalcular(); dibujarMapa(); dibujarIslas(); dibujarSelBar(); actualizarBotonesMapa(); dibujarFiltros(); render(); }
+
+// capacidades opcionales
+try{ if(window.claude?.use) window.claude.use("sample").then(f=>{ SAMPLE=f; if(f&&state.vista==="resumen") render(); }); }catch(e){}
+let downloads=null; try{ if(window.claude?.use) window.claude.use("downloads").then(d=>{ downloads=d; if(state.vista==="medidas") render(); }); }catch(e){}
+
+$("#subtitulo").textContent=`${fmt(D.meta.n_medidas)} medidas · ${fmt(D.meta.n_instrumentos)} instrumentos · corte ${D.meta.generado.slice(0,10)}`;
+$("#pie").innerHTML=`<b>Disclaimer institucional.</b> ${h(D.meta.aviso)} Clasificaciones generadas por un modelo de lenguaje a partir del texto de cada instrumento; cada etiqueta cita la página y el pasaje que la respalda y debe verificarse antes de su uso oficial. Versión de trabajo, sin logos institucionales hasta validación del MMA. Geometría comunal: BCN SIIT 2019. Taxonomías: PNACC DS 14/2025, ARClim, PSMA Ciudades, MMA ene-2026, FAO/FVC, Guía SbN MMA 2025.`;
+refrescar();
+})();
+</script>
+</body>
+</html>
